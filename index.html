@@ -1,49 +1,458 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mieszkanie VR - Skala 1:1 (Realne Wymiary)</title>
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Mieszkanie A031 - WebXR Meta Quest 3</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 40px;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      z-index: 10;
+    }
+    button {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #4a6fa5;
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+      z-index: 20;
+      backdrop-filter: blur(5px);
+      background: rgba(74, 111, 165, 0.9);
+      border: 1px solid rgba(255,255,255,0.3);
+      transition: all 0.3s ease;
+      pointer-events: auto;
+    }
+    button:hover {
+      background: #5f7fb0;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    }
+    @media (max-width: 600px) {
+      button {
+        padding: 12px 30px;
+        font-size: 16px;
+        bottom: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <a-scene background="color: #E5E5E5">
-        
-        <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
-        <a-light type="directional" color="#ffffff" intensity="0.4" position="-2 4 2"></a-light>
+  <div id="info">
+    <span>🏠 A031 | Powierzchnia: ok. 58.56 m²</span>
+    <span style="font-size:0.8rem; opacity:0.8;">Skala 1:1</span>
+  </div>
+  <button id="vr-button">▶ ROZPOCZNIJ VR (Meta Quest 3)</button>
 
-        <a-entity id="rig" movement-controls="speed: 0.15" position="-1.5 0 -1">
-            <a-entity camera position="0 1.6 0" look-controls></a-entity>
-            <a-entity oculus-touch-controls="hand: left"></a-entity>
-            <a-entity oculus-touch-controls="hand: right"></a-entity>
-        </a-entity>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+      }
+    }
+  </script>
 
-        <a-plane position="0 0 0" rotation="-90 0 0" width="12" height="12" color="#F5F5F5"></a-plane>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { VRButton } from 'three/addons/webxr/VRButton.js';
+    import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 
-        <a-box position="0 1.35 -5" width="10" height="2.7" depth="0.2" color="#FFFFFF"></a-box> <a-box position="0 1.35 5" width="10" height="2.7" depth="0.2" color="#FFFFFF"></a-box>  <a-box position="-5 1.35 0" width="0.2" height="2.7" depth="10" color="#FFFFFF"></a-box> <a-box position="5 1.35 0" width="0.2" height="2.7" depth="10" color="#FFFFFF"></a-box>  <a-box position="-1.5 1.35 -2" width="0.2" height="2.7" depth="6" color="#F0F0F0"></a-box> <a-box position="1 1.35 -2.5" width="5" height="2.7" depth="0.2" color="#F0F0F0"></a-box> <a-box position="-4.9 1 0" width="0.3" height="2" depth="0.8" color="#008000"></a-box>
-        <a-box position="-2.5 1 -2.5" width="0.8" height="2" depth="0.05" color="#008000" rotation="0 90 0"></a-box>
-        <a-box position="-0.5 1 -2.5" width="0.8" height="2" depth="0.05" color="#008000" rotation="0 90 0"></a-box>
-        <a-box position="-2.5 1 1" width="0.8" height="2" depth="0.05" color="#008000" rotation="0 90 0"></a-box>
+    // ---------- INICJALIZACJA SCENY ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111122);
+    
+    // Oświetlenie ambientowe i kierunkowe dla lepszej widoczności
+    const ambientLight = new THREE.AmbientLight(0x404066);
+    scene.add(ambientLight);
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight1.position.set(10, 15, 10);
+    scene.add(dirLight1);
+    const dirLight2 = new THREE.DirectionalLight(0xffccaa, 0.5);
+    dirLight2.position.set(-8, 5, -5);
+    scene.add(dirLight2);
+    
+    // Siatka pomocnicza (podłoga referencyjna) – delikatna, aby nie przeszkadzała
+    const gridHelper = new THREE.GridHelper(15, 20, 0x335577, 0x224466);
+    gridHelper.position.y = -0.01;
+    scene.add(gridHelper);
 
-        <a-box position="4.9 1.5 -3" width="0.3" height="1.5" depth="1.6" color="#D3D3D3" opacity="0.6"></a-box> <a-box position="4.9 1.5 2" width="0.3" height="2.2" depth="2.2" color="#D3D3D3" opacity="0.6"></a-box> <a-box position="-1 1.5 4.9" width="1.6" height="1.5" depth="0.3" color="#D3D3D3" opacity="0.6"></a-box> <a-box position="-3 1.25 -0.5" width="0.6" height="2.5" depth="1.2" color="#FFD700"></a-box>
-        <a-box position="-1.8 1.25 -4.5" width="0.6" height="2.5" depth="0.8" color="#FFD700"></a-box>
-        <a-box position="-4.5 1.25 1" width="0.6" height="2.5" depth="1.2" color="#FFD700"></a-box>
+    // Kamera perspektywiczna
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(10, 8, 12);
+    camera.lookAt(5, 0, 4);
 
-        <a-box position="2 0.45 -4" width="2" height="0.9" depth="1.6" color="#D2B48C"></a-box>
-        <a-box position="1 0.45 -3" width="0.4" height="0.9" depth="0.4" color="#D2B48C"></a-box>
-        <a-box position="3 0.45 -3" width="0.4" height="0.9" depth="0.4" color="#D2B48C"></a-box>
-        <a-box position="-4 0.45 3.5" width="1.2" height="0.9" depth="2" color="#D2B48C"></a-box>
-        <a-box position="-2.5 0.45 4.5" width="1.2" height="0.9" depth="0.6" color="#D2B48C"></a-box>
-        <a-box position="1 0.45 4.5" width="2" height="0.9" depth="0.4" color="#D2B48C"></a-box>
-        <a-box position="2 0.45 3" width="2" height="0.9" depth="1" color="#D2B48C"></a-box> <a-box position="1.5 0.45 2" width="1" height="0.9" depth="0.6" color="#D2B48C"></a-box> <a-box position="2 0.45 -0.5" width="3.5" height="0.9" depth="0.6" color="#D2B48C"></a-box>
+    // Renderer WebGL z obsługą XR
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.xr.enabled = true;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
 
-        <a-box position="2 0.375 1" width="1.2" height="0.75" depth="0.8" color="#8B4513"></a-box>
-        <a-box position="1.2 0.375 1" width="0.4" height="0.75" depth="0.4" color="#8B4513"></a-box>
-        <a-box position="2.8 0.375 1" width="0.4" height="0.75" depth="0.4" color="#8B4513"></a-box>
-        <a-box position="2 0.375 0.4" width="0.4" height="0.75" depth="0.4" color="#8B4513"></a-box>
-        <a-box position="2 0.375 1.6" width="0.4" height="0.75" depth="0.4" color="#8B4513"></a-box>
+    // Kontrolery (dla trybu desktopowego)
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(5, 0.5, 4);
+    controls.enableDamping = true;
+    controls.maxPolarAngle = Math.PI / 2.2;
+    controls.minDistance = 3;
+    controls.maxDistance = 18;
+    controls.update();
 
-        <a-box position="-4 0.3 -4.5" width="0.8" height="0.6" depth="1.6" color="#00BFFF"></a-box> <a-box position="-3 0.45 -3.5" width="0.5" height="0.9" depth="0.5" color="#00BFFF"></a-box> <a-box position="-4.5 0.45 -3" width="0.4" height="0.9" depth="0.6" color="#00BFFF"></a-box> <a-box position="1.5 0.46 -0.5" width="0.8" height="0.9" depth="0.6" color="#00BFFF"></a-box> <a-box position="3.2 0.46 -0.5" width="0.6" height="0.9" depth="0.6" color="#00BFFF"></a-box> </a-scene>
+    // Przycisk VR
+    const vrButton = VRButton.createButton(renderer);
+    vrButton.style.position = 'absolute';
+    vrButton.style.bottom = '100px';
+    vrButton.style.left = '50%';
+    vrButton.style.transform = 'translateX(-50%)';
+    vrButton.style.zIndex = '25';
+    vrButton.style.display = 'none'; // ukrywamy domyślny, mamy własny przycisk
+    document.body.appendChild(vrButton);
+    
+    document.getElementById('vr-button').addEventListener('click', () => {
+      if (renderer.xr.isPresenting) {
+        renderer.xr.getSession().end();
+      } else {
+        renderer.xr.getSession().then(session => {
+          renderer.xr.setSession(session);
+        }).catch(err => {
+          alert('Nie udało się uruchomić VR. Upewnij się, że używasz Meta Quest 3 i przeglądarki obsługującej WebXR.');
+        });
+      }
+    });
+
+    // Kontrolery VR (podstawowe)
+    const controllerModelFactory = new XRControllerModelFactory();
+    
+    // ---------- FUNKCJE POMOCNICZE ----------
+    function createWall(width, height, depth, color, opacity = 1, position = [0,0,0]) {
+      const geometry = new THREE.BoxGeometry(width, height, depth);
+      const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7, transparent: opacity < 1, opacity: opacity });
+      const wall = new THREE.Mesh(geometry, material);
+      wall.position.set(position[0], position[1], position[2]);
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+      return wall;
+    }
+
+    function createFloor(width, depth, color = 0x3a3a4a, y = 0) {
+      const geometry = new THREE.PlaneGeometry(width, depth);
+      const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.9, side: THREE.DoubleSide });
+      const floor = new THREE.Mesh(geometry, material);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = y;
+      floor.receiveShadow = true;
+      return floor;
+    }
+
+    // Tworzenie elementów mebli zgodnie z legendą
+    function createCabinetHigh(width, height, depth, color = 0xffaa00) {
+      const group = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 }));
+      body.position.y = height/2;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+      return group;
+    }
+
+    function createCabinetLow(width, height, depth, color = 0xc19a6b) {
+      const group = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), new THREE.MeshStandardMaterial({ color: color, roughness: 0.6 }));
+      body.position.y = height/2;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+      return group;
+    }
+
+    function createTable(width, depth, height, color = 0x8b5a2b) {
+      const group = new THREE.Group();
+      const top = new THREE.Mesh(new THREE.BoxGeometry(width, 0.05, depth), new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 }));
+      top.position.y = height - 0.025;
+      top.castShadow = true;
+      top.receiveShadow = true;
+      group.add(top);
+      const legThickness = 0.08;
+      const legHeight = height - 0.05;
+      const legPositions = [
+        [-width/2 + 0.1, legHeight/2, -depth/2 + 0.1],
+        [width/2 - 0.1, legHeight/2, -depth/2 + 0.1],
+        [-width/2 + 0.1, legHeight/2, depth/2 - 0.1],
+        [width/2 - 0.1, legHeight/2, depth/2 - 0.1]
+      ];
+      legPositions.forEach(pos => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(legThickness, legHeight, legThickness), new THREE.MeshStandardMaterial({ color: 0x5a3e2b, roughness: 0.5 }));
+        leg.position.set(pos[0], pos[1], pos[2]);
+        leg.castShadow = true;
+        leg.receiveShadow = true;
+        group.add(leg);
+      });
+      return group;
+    }
+
+    function createWindowFrame(width, height, depth = 0.15) {
+      const group = new THREE.Group();
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.4 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0xaaccff, roughness: 0.1, transparent: true, opacity: 0.4, emissive: new THREE.Color(0x112233) });
+      
+      const frameThickness = 0.08;
+      // Ramy zewnętrzne
+      const topFrame = new THREE.Mesh(new THREE.BoxGeometry(width, frameThickness, depth), frameMat);
+      topFrame.position.set(0, height/2 - frameThickness/2, 0);
+      group.add(topFrame);
+      const bottomFrame = new THREE.Mesh(new THREE.BoxGeometry(width, frameThickness, depth), frameMat);
+      bottomFrame.position.set(0, -height/2 + frameThickness/2, 0);
+      group.add(bottomFrame);
+      const leftFrame = new THREE.Mesh(new THREE.BoxGeometry(frameThickness, height, depth), frameMat);
+      leftFrame.position.set(-width/2 + frameThickness/2, 0, 0);
+      group.add(leftFrame);
+      const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(frameThickness, height, depth), frameMat);
+      rightFrame.position.set(width/2 - frameThickness/2, 0, 0);
+      group.add(rightFrame);
+      
+      // Szyba
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(width - frameThickness*2, height - frameThickness*2, depth*0.4), glassMat);
+      glass.position.set(0, 0, 0);
+      group.add(glass);
+      
+      return group;
+    }
+
+    function createDoor(width, height, depth = 0.1, color = 0x66aa66, openAngle = 0) {
+      const group = new THREE.Group();
+      const doorMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), doorMat);
+      panel.position.set(0, height/2, 0);
+      panel.castShadow = true;
+      panel.receiveShadow = true;
+      group.add(panel);
+      // Klamka
+      const handle = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8), new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.3, metalness: 0.8 }));
+      handle.position.set(width/2 - 0.1, height/2 + 0.1, depth/2 + 0.02);
+      group.add(handle);
+      return group;
+    }
+
+    // ---------- BUDOWA MIESZKANIA NA PODSTAWIE PLANU ----------
+    // Wymiary w metrach (1 jednostka = 1 metr)
+    // Układ współrzędnych: X w prawo, Z w głąb (kierunek północny w planie), Y w górę
+    
+    const wallHeight = 2.6;
+    const wallThickness = 0.15;
+    
+    // Definiujemy pomieszczenia i ich pozycje (względem lewego dolnego rogu planu)
+    // Współrzędne środków pomieszczeń i wymiary (szerokość X, głębokość Z)
+    
+    // Najpierw tworzymy podłogi dla wszystkich pomieszczeń
+    const rooms = [
+      { name: 'A031.01 PRZEDP', area: 6.58, width: 2.15, depth: 3.06, pos: [1.075, 0, 1.53], color: 0x4a4a5a },
+      { name: 'A031.02 LAZIENKA', area: 4.86, width: 1.8, depth: 2.7, pos: [5.1, 0, 1.35], color: 0x4a4a6a },
+      { name: 'A031.03 POKÓJ', area: 13.25, width: 3.9, depth: 3.4, pos: [1.95, 0, 4.9], color: 0x4a4a5a },
+      { name: 'A031.04 POKÓJ Z AN.KUCH.', area: 24.05, width: 5.2, depth: 4.62, pos: [7.1, 0, 4.51], color: 0x4a4a5a },
+      { name: 'A031.05 POKÓJ', area: 9.82, width: 3.1, depth: 3.17, pos: [9.05, 0, 1.585], color: 0x4a4a5a },
+      { name: 'A031.06 BALKON', area: 6.62, width: 5.2, depth: 1.27, pos: [7.1, 0, 7.0], color: 0x5a5a6a }
+    ];
+    
+    rooms.forEach(room => {
+      const floor = createFloor(room.width, room.depth, room.color, 0.001);
+      floor.position.set(room.pos[0], 0.001, room.pos[1]);
+      scene.add(floor);
+    });
+    
+    // Ściany zewnętrzne i wewnętrzne (konstrukcja nośna)
+    // Współrzędne ścian jako linie: [x1, z1, x2, z2]
+    const walls = [
+      // Ściany zewnętrzne (grubsze, nieco ciemniejsze)
+      { start: [0, 0], end: [10.2, 0], color: 0x8899aa, external: true },
+      { start: [10.2, 0], end: [10.2, 5.9], color: 0x8899aa, external: true },
+      { start: [10.2, 5.9], end: [0, 5.9], color: 0x8899aa, external: true },
+      { start: [0, 5.9], end: [0, 0], color: 0x8899aa, external: true },
+      // Ściany wewnętrzne
+      { start: [2.15, 0], end: [2.15, 3.06], color: 0x778899 },
+      { start: [4.3, 0], end: [4.3, 3.06], color: 0x778899 },
+      { start: [0, 3.06], end: [10.2, 3.06], color: 0x778899 },
+      { start: [6.1, 3.06], end: [6.1, 5.9], color: 0x778899 },
+      { start: [10.2, 2.8], end: [6.1, 2.8], color: 0x778899 }, // ściana między pokojem 04 a 05
+    ];
+    
+    walls.forEach(w => {
+      const dx = w.end[0] - w.start[0];
+      const dz = w.end[1] - w.start[1];
+      const length = Math.sqrt(dx*dx + dz*dz);
+      const angle = Math.atan2(dz, dx);
+      const midX = (w.start[0] + w.end[0]) / 2;
+      const midZ = (w.start[1] + w.end[1]) / 2;
+      
+      const wallMesh = createWall(length, wallHeight, wallThickness, w.color, 1, [midX, wallHeight/2, midZ]);
+      wallMesh.rotation.y = angle;
+      scene.add(wallMesh);
+    });
+    
+    // ---------- OKNA (jasnoszary) ----------
+    // Pozycje okien na podstawie planu (wstawiane w ściany)
+    function addWindow(x, z, width, height, rotationY) {
+      const windowGroup = createWindowFrame(width, height, 0.15);
+      windowGroup.position.set(x, 1.2, z);
+      windowGroup.rotation.y = rotationY;
+      scene.add(windowGroup);
+    }
+    
+    // Okna w pokoju 03 (północna ściana)
+    addWindow(2.9, 5.9, 1.8, 1.5, 0);
+    // Okno w pokoju 04 (północna ściana)
+    addWindow(7.8, 5.9, 2.0, 1.5, 0);
+    // Okno w pokoju 05 (wschodnia ściana)
+    addWindow(10.2, 1.2, 1.5, 1.3, Math.PI/2);
+    
+    // ---------- DRZWI (zielone skrzydła) - szerokość 80 cm ----------
+    function addDoor(x, z, width, height, rotationY, openDir = 1) {
+      const doorGroup = createDoor(width, height, 0.1, 0x55aa55);
+      doorGroup.position.set(x, 0, z);
+      doorGroup.rotation.y = rotationY;
+      scene.add(doorGroup);
+    }
+    
+    // Drzwi wejściowe (A031.01, południowa ściana)
+    addDoor(1.0, 0, 0.8, 2.1, 0);
+    // Drzwi między przedpokojem a pokojem 03
+    addDoor(1.8, 3.06, 0.8, 2.1, 0);
+    // Drzwi do łazienki
+    addDoor(5.0, 3.06, 0.8, 2.1, 0);
+    // Drzwi między pokojem 04 a 05
+    addDoor(7.0, 2.8, 0.8, 2.1, 0);
+    // Drzwi balkonowe (pokój 04)
+    addDoor(7.8, 5.9, 0.8, 2.1, 0);
+    
+    // ---------- MEBLE I WYPOSAŻENIE ----------
+    
+    // --- ŁAZIENKA (A031.02) ---
+    // Wanna (błękitny montaż)
+    const bath = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.7), new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.2 }));
+    bath.position.set(5.4, 0.25, 2.2);
+    bath.castShadow = true;
+    bath.receiveShadow = true;
+    scene.add(bath);
+    // Umywalka
+    const sink = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.5), new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.2 }));
+    sink.position.set(4.7, 0.7, 0.5);
+    sink.castShadow = true;
+    sink.receiveShadow = true;
+    scene.add(sink);
+    // WC (orientacyjnie)
+    const toilet = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.4, 16), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.3 }));
+    toilet.position.set(5.8, 0.2, 0.7);
+    toilet.castShadow = true;
+    toilet.receiveShadow = true;
+    scene.add(toilet);
+    
+    // --- KUCHNIA (część A031.04) ---
+    // Szafki wysokie (żółte) - wzdłuż ściany zachodniej
+    const highCabinet1 = createCabinetHigh(0.8, 2.2, 0.6, 0xffaa00);
+    highCabinet1.position.set(6.3, 0, 3.4);
+    scene.add(highCabinet1);
+    const highCabinet2 = createCabinetHigh(0.8, 2.2, 0.6, 0xffaa00);
+    highCabinet2.position.set(7.2, 0, 3.4);
+    scene.add(highCabinet2);
+    // Szafki niskie (jasnobrązowe) pod oknem?
+    const lowCabinet = createCabinetLow(1.2, 0.9, 0.6, 0xc19a6b);
+    lowCabinet.position.set(8.5, 0, 3.4);
+    scene.add(lowCabinet);
+    // Stół (ciemnobrązowy)
+    const table = createTable(1.4, 0.9, 0.75, 0x8b5a2b);
+    table.position.set(8.9, 0, 4.9);
+    scene.add(table);
+    
+    // --- POKÓJ 03 (sypialnia/salon) ---
+    // Szafa wysoka
+    const wardrobe = createCabinetHigh(1.5, 2.2, 0.6, 0xffaa00);
+    wardrobe.position.set(1.2, 0, 4.2);
+    scene.add(wardrobe);
+    // Niski mebel
+    const lowStorage = createCabinetLow(1.2, 0.9, 0.5, 0xc19a6b);
+    lowStorage.position.set(2.8, 0, 4.2);
+    scene.add(lowStorage);
+    // Stół
+    const desk = createTable(1.2, 0.7, 0.75, 0x8b5a2b);
+    desk.position.set(0.8, 0, 5.2);
+    scene.add(desk);
+    
+    // --- POKÓJ 05 ---
+    const smallWardrobe = createCabinetHigh(1.0, 2.2, 0.6, 0xffaa00);
+    smallWardrobe.position.set(9.8, 0, 1.0);
+    scene.add(smallWardrobe);
+    const smallTable = createTable(0.9, 0.7, 0.75, 0x8b5a2b);
+    smallTable.position.set(8.5, 0, 1.2);
+    scene.add(smallTable);
+    
+    // --- BALKON (A031.06) ---
+    // Balustrada
+    const railingMat = new THREE.MeshStandardMaterial({ color: 0x99aacc, roughness: 0.4, metalness: 0.7 });
+    const railing = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.9, 0.08), railingMat);
+    railing.position.set(7.1, 0.45, 6.35);
+    scene.add(railing);
+    
+    // Dodatkowe detale: grzejniki (hp) - oznaczone na planie, umieszczamy pod oknami
+    function addHeater(x, z, width, rotationY) {
+      const heater = new THREE.Mesh(new THREE.BoxGeometry(width, 0.4, 0.15), new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.3, metalness: 0.8 }));
+      heater.position.set(x, 0.2, z);
+      heater.rotation.y = rotationY;
+      heater.castShadow = true;
+      heater.receiveShadow = true;
+      scene.add(heater);
+    }
+    // hp 55, 80, 200, 85, 90, 160 (symulacja rozmieszczenia)
+    addHeater(2.8, 5.75, 0.55, 0); // hp55
+    addHeater(7.5, 5.75, 0.8, 0); // hp80
+    addHeater(9.0, 5.75, 2.0, 0); // hp200 (długi)
+    addHeater(10.05, 1.5, 0.85, Math.PI/2); // hp85
+    addHeater(5.2, 3.0, 0.9, 0); // hp90
+    addHeater(0.5, 3.0, 1.6, 0); // hp160
+    
+    // ---------- ANIMACJA I URUCHOMIENIE ----------
+    function animate() {
+      renderer.setAnimationLoop(() => {
+        controls.update();
+        renderer.render(scene, camera);
+      });
+    }
+    
+    // Obsługa resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    
+    animate();
+    
+    console.log('Mieszkanie A031 załadowane. Kliknij "ROZPOCZNIJ VR" aby wejść w tryb immersyjny na Meta Quest 3.');
+  </script>
 </body>
 </html>
